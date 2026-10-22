@@ -1,0 +1,10 @@
+{
+  "breakdance_untracked": {
+    "frame": "frame_0000",
+    "width": 1920,
+    "height": 1080,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "pendencias": "classificacao forward-facing/object-centric, mascara e frame-ancora a confirmar na N0826"
+  }
+}
