@@ -1,0 +1,42 @@
+diff --git a/decode_single_scene.py b/decode_single_scene.py
+index 0523e2e..0f89bc2 100644
+--- a/decode_single_scene.py
++++ b/decode_single_scene.py
+@@ -13,7 +13,7 @@ def train(args):
+ 
+     step_num = len(os.listdir(os.path.join(args.bit_path_from, str(args.lmd))))
+     lmd = args.lmd
+-    chunk_size_list = [200_0000, 100_0000, 100_0000]
++    chunk_size_list = [c // args.chunk_div for c in [200_0000, 100_0000, 100_0000]]  # T6: padrao 1 = oficial
+ 
+     CM = FCGS(
+         Q=1,
+@@ -55,6 +55,7 @@ if __name__ == "__main__":
+     parser = ArgumentParser(description="dataset_param")
+     parser.add_argument("--lmd", default=1e-4, choices=[1e-4, 2e-4, 4e-4, 8e-4, 16e-4], type=float)
+     parser.add_argument("--nr", default=3, type=float)
++    parser.add_argument("--chunk_div", default=1, type=int)
+     parser.add_argument("--determ", default=1, type=float)
+     parser.add_argument("--bit_path_from", default="./bitstreams/tmp/", type=str)
+     parser.add_argument("--ply_path_to", default="./bitstreams/tmp/point_cloud.ply", type=str)
+diff --git a/encode_single_scene.py b/encode_single_scene.py
+index 06ef812..b5db5a7 100644
+--- a/encode_single_scene.py
++++ b/encode_single_scene.py
+@@ -31,7 +31,7 @@ def train(args):
+ 
+     step_num = int(np.ceil(N_gaussian / per_step_size))
+     lmd = args.lmd
+-    chunk_size_list = [200_0000, 100_0000, 100_0000]
++    chunk_size_list = [c // args.chunk_div for c in [200_0000, 100_0000, 100_0000]]  # T6: padrao 1 = oficial
+ 
+     CM = FCGS(
+         Q=1,
+@@ -63,6 +63,7 @@ if __name__ == "__main__":
+     parser = ArgumentParser(description="dataset_param")
+     parser.add_argument("--lmd", default=1e-4, choices=[1e-4, 2e-4, 4e-4, 8e-4, 16e-4], type=float)
+     parser.add_argument("--nr", default=3, type=float)
++    parser.add_argument("--chunk_div", default=1, type=int)
+     parser.add_argument("--determ", default=1, type=float)
+     parser.add_argument("--bit_path_to", default="./bitstreams/tmp/", type=str)
+     parser.add_argument("--ply_path_from", default="./xxx/point_cloud.ply", type=str)

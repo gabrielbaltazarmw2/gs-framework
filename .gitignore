@@ -1,0 +1,43 @@
+# Material que nao sobe (ver NOTICE)
+patches/cuda12.8_math_functions_glibc2.43.patch
+
+# Dados, saidas e bitstreams (vivem em ~/mpeg/{datasets,derived,results})
+results/
+eval/
+legacy/
+bitstream/
+bitstream_report/
+*.ply
+*.mp4
+*.bin
+*.b
+*.npz
+*.npy
+
+# Pesos e modelos
+*.pkl
+*.pth
+*.pt
+*.ckpt
+
+# Logs e saidas de metrica
+*.log
+ctc_metrics*.txt
+
+# Caches e temporarios
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.orig
+*.rej
+*.bak
+*.swp
+
+# Arquivos compactados e segredos
+*.zip
+*.tar
+*.tar.gz
+*.7z
+.env
+*.pem
+*.key

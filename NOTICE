@@ -1,0 +1,16 @@
+Codigo de terceiros neste repositorio
+
+patches/fcgs_31e59a46.patch e patches/fcgs_31e59a46_chunk_div.patch sao
+modificacoes do FCGS (https://github.com/YihangChen-ee/FCGS, commit 31e59a46).
+Contem linhas de contexto de arquivos do FCGS e alteram:
+  - submodules/freqencoder/setup.py, submodules/gridencoder/setup.py,
+    submodules/gridcreater/setup.py (-std=c++14 -> -std=c++17)
+  - submodules/simple-knn/simple_knn.cu (#include <cfloat>)
+  - encode_single_scene.py e decode_single_scene.py (argumento --chunk_div)
+O FCGS e distribuido sob a Apache License 2.0 com restricao adicional: uso
+comercial proibido sem permissao escrita dos autores. Copia do LICENSE do
+FCGS em patches/LICENSE.FCGS.md.
+
+envs/patch_cuda_math_functions.sh nao contem codigo da NVIDIA: aplica por sed,
+no header do CUDA instalado no ambiente do usuario, a mudanca descrita no
+proprio script.
