@@ -6,5 +6,45 @@
     "sparse_dir": "colmap_data/frame_0000/sparse",
     "mask_dir": null,
     "pendencias": "classificacao forward-facing/object-centric, mascara e frame-ancora a confirmar na N0826"
+  },
+  "breakfast_semitracked": {
+    "frame": "frame_0000",
+    "width": 1920,
+    "height": 1080,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "classe": "forward_facing",
+    "vistas": 15,
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+  },
+  "bartender_semitracked": {
+    "frame": "frame_0000",
+    "width": 1920,
+    "height": 1080,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "classe": "forward_facing",
+    "vistas": 21,
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+  },
+  "manwithfruit_tracked": {
+    "frame": "frame_0081",
+    "width": 3840,
+    "height": 2160,
+    "sparse_dir": "colmap_data/frame_0081/sparse",
+    "mask_dir": null,
+    "classe": "object_centric",
+    "vistas": 24,
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+  },
+  "flowerdance": {
+    "frame": "frame_0000",
+    "width": 2456,
+    "height": 2054,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "classe": "object_centric",
+    "vistas": 64,
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
   }
 }
