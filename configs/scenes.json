@@ -15,7 +15,8 @@
     "mask_dir": null,
     "classe": "forward_facing",
     "vistas": 15,
-    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)",
+    "start_frame": 0
   },
   "bartender_semitracked": {
     "frame": "frame_0000",
@@ -25,7 +26,8 @@
     "mask_dir": null,
     "classe": "forward_facing",
     "vistas": 21,
-    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)",
+    "start_frame": 0
   },
   "manwithfruit_tracked": {
     "frame": "frame_0081",
@@ -35,7 +37,8 @@
     "mask_dir": null,
     "classe": "object_centric",
     "vistas": 24,
-    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)",
+    "start_frame": 81
   },
   "flowerdance": {
     "frame": "frame_0000",
@@ -45,6 +48,7 @@
     "mask_dir": null,
     "classe": "object_centric",
     "vistas": 64,
-    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)"
+    "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)",
+    "start_frame": 0
   }
 }
