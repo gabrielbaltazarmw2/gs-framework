@@ -51,5 +51,16 @@
     "vistas": 64,
     "pendencias": "Tabela 1 da WG05 N420; piloto da T8 (criterios de 29/10)",
     "start_frame": 0
+  },
+  "cinema_semitracked": {
+    "frame": "frame_0000",
+    "width": 1920,
+    "height": 1080,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "classe": "forward_facing",
+    "vistas": 21,
+    "start_frame": 0,
+    "pendencias": "Tabela 1 da WG05 N420; substituta da bartender na piloto da T8 (regra de 29/10)"
   }
 }
