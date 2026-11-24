@@ -9,6 +9,7 @@ Opcoes:
   --force         refaz a avaliacao mesmo se eval/metrics.json ja existir
   --check-legacy  compara o PSNR novo com legacy/ctc_metrics.txt
 """
+import os
 import argparse, json, re, subprocess, time
 from datetime import datetime
 from pathlib import Path
@@ -93,6 +94,7 @@ def evaluate(point, force=False, check=False):
              "--frameCount=1", f"--startFrame={sc.get('start_frame', 0)}",
              "--useCameraPosition=1", "--cpu=1",
              f"--width={sc['width']}", f"--height={sc['height']}",
+             f"--threads={min(sc['vistas'], os.cpu_count())}",           # N420: 1 a n. de vistas
              "-o", txt], out / "metrics.log")
         dur = time.time() - t0
         bs = point / "bitstream"                                                # Passo E
