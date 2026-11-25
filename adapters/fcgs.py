@@ -256,7 +256,7 @@ def run_point(a, lmd, commit, env):
 
     py = sys.executable
     enc_cmd = [py, 'encode_single_scene.py', '--lmd', lmd, '--chunk_div', str(a.chunk_div),
-               '--ply_path_from', str(a.input), '--bit_path_to', str(work / 'bits'), '--determ', '1']
+               '--ply_path_from', str(a.enc_input), '--bit_path_to', str(work / 'bits'), '--determ', '1']
     rc, t_enc = timed(enc_cmd, FCGS_DIR, work / 'encode.log')
     if rc != 0:
         sys.exit(f'[{lmd}] encode falhou (exit {rc}); ver {work / "encode.log"}')
@@ -272,7 +272,7 @@ def run_point(a, lmd, commit, env):
     files = sorted(p for p in (work / 'bits').rglob('*') if p.is_file())
     rate_bytes = sum(p.stat().st_size for p in files)
 
-    src = PlyData.read(str(a.input))['vertex'].data
+    src = PlyData.read(str(a.enc_input))['vertex'].data   # geometria contra o que o encoder recebeu
     dec = PlyData.read(str(raw))['vertex'].data
     assert len(dec) == len(src), f'N decodificado {len(dec)} != fonte {len(src)}'
     xyz = np.stack([src['x'], src['y'], src['z']], 1).astype(np.float32)
@@ -290,7 +290,8 @@ def run_point(a, lmd, commit, env):
                     codec_params=dict(chunk_div=a.chunk_div, determ=1,
                                       side_info=f'{HEADER} ({header_bytes} B) dentro de bitstream/'),
                     env=env,
-                    input=dict(path=str(a.input), md5=a.input_md5, md5_checked=a.md5_checked))
+                    input=dict(path=str(a.input), md5=a.input_md5, md5_checked=a.md5_checked),
+                    encoder_input=a.enc_input_info)
     (tmp / 'manifest.json').write_text(json.dumps(manifest, indent=2, ensure_ascii=False))
     (tmp / 'geometry.json').write_text(json.dumps(geo, indent=2))
     run = dict(encode=t_enc, decode=t_dec, vram_base_mib=g0['vram_used_mib'],
@@ -321,6 +322,7 @@ def main():
     p.add_argument('--lmd', required=True, help="'all' ou um de " + ', '.join(LAMBDAS))
     p.add_argument('--input', type=Path, help='padrão: ~/mpeg/datasets/<cena>/plys/<frame>.ply')
     p.add_argument('--md5', help='md5 oficial da entrada (padrão: procurar nos .md5 da sequência)')
+    p.add_argument('--fcgs_input', type=Path, help='entrada tratada só para o encoder (scripts/treat_neginf_scale.py); a referência continua sendo --input')
     p.add_argument('--chunk_div', type=int, default=2)
     p.add_argument('--results_root', type=Path, default=HOME / 'mpeg/results')
     p.add_argument('--work_root', type=Path, default=HOME / 'mpeg/scratch/fcgs_adapter')
@@ -340,6 +342,16 @@ def main():
     if ref and ref != a.input_md5:
         sys.exit(f'md5 da entrada {a.input_md5} difere do oficial {ref}')
     print(f'entrada: {a.input} | md5 {a.input_md5} | conferido: {a.md5_checked}')
+    a.enc_input, a.enc_input_info = a.input, None
+    if a.fcgs_input:
+        a.enc_input = a.fcgs_input.resolve()
+        meta = json.loads(a.enc_input.with_suffix('.json').read_text())
+        assert meta['original']['md5'] == a.input_md5, 'entrada tratada não vem desta entrada original'
+        assert meta['tratado']['md5'] == file_hash(a.enc_input, 'md5'), 'md5 da entrada tratada não confere com o .json'
+        assert not meta.get('framework_dirty'), 'entrada tratada gerada com cópia suja'
+        a.enc_input_info = dict(path=str(a.enc_input), md5=meta['tratado']['md5'], regra=meta['regra'],
+                                trocas=meta['trocas'], script_commit=meta['framework_commit'])
+        print(f'entrada do encoder (tratada): {a.enc_input} | md5 {meta["tratado"]["md5"]}')
 
     commit, env = environment()
     for l in lmds:
