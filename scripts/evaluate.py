@@ -16,8 +16,12 @@ from pathlib import Path
 
 FW = Path(__file__).resolve().parent.parent
 def load(p): return json.loads(Path(p).read_text())
+# T12: GSC_PATHS escolhe outro paths.json (outra versao das ferramentas); sem ela, o padrao
+PATHS_FILE = Path(os.environ.get("GSC_PATHS", FW / "configs/paths.json")).expanduser()
+if not PATHS_FILE.is_absolute():
+    PATHS_FILE = FW / PATHS_FILE
 P = {k: (Path(v).expanduser() if isinstance(v, str) and v.startswith("~") else v)
-     for k, v in load(FW / "configs/paths.json").items()}
+     for k, v in load(PATHS_FILE).items()}
 SCENES = load(FW / "configs/scenes.json")
 
 SCALARS = {
@@ -57,7 +61,8 @@ def run(cmd, log):
 
 def camera(ply_in, ply_out, scene, log):
     sparse = P["datasets"] / scene / SCENES[scene]["sparse_dir"]
-    run([P["camera_bin"], "-i", ply_in,
+    sub = [P["camera_subcommand"]] if P.get("camera_subcommand") else []  # T12: "gstools camera" na 155
+    run([P["camera_bin"], *sub, "-i", ply_in,
          f"--camera={sparse / 'cameras.bin'}", f"--image={sparse / 'images.bin'}",
          "-o", ply_out], log)
 
@@ -158,6 +163,8 @@ if __name__ == "__main__":
     if a.summary:
         summary()
     else:
+        if a.all and "GSC_PATHS" in os.environ:
+            ap.error("--all com GSC_PATHS avaliaria pontos de todas as series com outra versao; informe os pontos")
         pts = all_points() if a.all else [p.resolve() for p in a.points]
         if not pts:
             ap.error("informe pontos ou use --all")

@@ -1,0 +1,9 @@
+{
+  "mpeg_root": "~/mpeg",
+  "datasets": "~/mpeg/datasets",
+  "derived": "~/mpeg/derived_mpeg153",
+  "results": "~/mpeg/results",
+  "metrics_bin": "~/mpeg/tools/mpeg-gsc-metrics/build/Release/bin/mpeg-gsc-metrics",
+  "camera_bin": "~/mpeg/tools/mpeg-gsc-tools/gsTools/build/msvc/Release/bin/cameraPosition",
+  "tools_version": "release_mpeg153 (metrics a2352565, tools 31d23c91), gcc 15.2.0, cpu_only"
+}

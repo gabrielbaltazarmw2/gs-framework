@@ -1,0 +1,10 @@
+{
+  "mpeg_root": "~/mpeg",
+  "datasets": "~/mpeg/datasets",
+  "derived": "~/mpeg/derived_mpeg155",
+  "results": "~/mpeg/results",
+  "metrics_bin": "~/mpeg/tools/mpeg-gsc-metrics_mpeg155/build/Release/bin/mpeg-gsc-metrics",
+  "camera_bin": "~/mpeg/tools/mpeg-gsc-tools_mpeg155/gsTools/build/msvc/Release/bin/gstools",
+  "camera_subcommand": "camera",
+  "tools_version": "release_mpeg155 (metrics f49394cc, tools 8bc46db3), gcc 15.2.0, cpu_only"
+}
