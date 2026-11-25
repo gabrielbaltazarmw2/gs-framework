@@ -73,5 +73,16 @@
     "vistas": 15,
     "start_frame": 0,
     "pendencias": "Tabela 1 da WG05 N420; substituicao por variante na piloto da T8 (decisao de 24/11)"
+  },
+  "breakfast_untracked": {
+    "frame": "frame_0000",
+    "width": 1920,
+    "height": 1080,
+    "sparse_dir": "colmap_data/frame_0000/sparse",
+    "mask_dir": null,
+    "classe": "forward_facing",
+    "vistas": 15,
+    "start_frame": 0,
+    "pendencias": "Tabela 1 da WG05 N420; substituicao por variante na piloto da T8 (decisao de 24/11)"
   }
 }
