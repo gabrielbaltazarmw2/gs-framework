@@ -27,7 +27,7 @@ HOME = Path.home()
 FCGS_DIR = HOME / 'mpeg/methods/fcgs'
 FRAMEWORK = HOME / 'mpeg/framework'
 LAMBDAS = ['1e-4', '2e-4', '4e-4', '8e-4', '16e-4']
-PATCHES = ['fcgs_31e59a46.patch', 'fcgs_31e59a46_chunk_div.patch']
+PATCHES = ['fcgs_31e59a46.patch', 'fcgs_31e59a46_chunk_div.patch', 'fcgs_31e59a46_t17_mem_sched.patch']
 CANON = (['x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2'] + [f'f_rest_{i}' for i in range(45)]
          + ['opacity', 'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3'])
 assert len(CANON) == 59
@@ -256,7 +256,8 @@ def run_point(a, lmd, commit, env):
 
     py = sys.executable
     enc_cmd = [py, 'encode_single_scene.py', '--lmd', lmd, '--chunk_div', str(a.chunk_div),
-               '--ply_path_from', str(a.enc_input), '--bit_path_to', str(work / 'bits'), '--determ', '1']
+               '--ply_path_from', str(a.enc_input), '--bit_path_to', str(work / 'bits'), '--determ', '1',
+               '--mem_sched', str(a.mem_sched)]   # T17: só agendamento do encoder; decoder oficial, fora do cabeçalho
     rc, t_enc = timed(enc_cmd, FCGS_DIR, work / 'encode.log')
     if rc != 0:
         sys.exit(f'[{lmd}] encode falhou (exit {rc}); ver {work / "encode.log"}')
@@ -287,7 +288,7 @@ def run_point(a, lmd, commit, env):
     manifest = dict(method='fcgs', method_version=commit, scene=a.scene, frame=a.frame,
                     rate_param=dict(type='lambda', value=lmd), conda_env='fcgs',
                     rate_source='measured_bitstream',
-                    codec_params=dict(chunk_div=a.chunk_div, determ=1,
+                    codec_params=dict(chunk_div=a.chunk_div, determ=1, mem_sched=a.mem_sched,
                                       side_info=f'{HEADER} ({header_bytes} B) dentro de bitstream/'),
                     env=env,
                     input=dict(path=str(a.input), md5=a.input_md5, md5_checked=a.md5_checked),
@@ -324,6 +325,8 @@ def main():
     p.add_argument('--md5', help='md5 oficial da entrada (padrão: procurar nos .md5 da sequência)')
     p.add_argument('--fcgs_input', type=Path, help='entrada tratada só para o encoder (scripts/treat_neginf_scale.py); a referência continua sendo --input')
     p.add_argument('--chunk_div', type=int, default=2)
+    p.add_argument('--mem_sched', type=int, default=0, choices=[0, 1, 2],
+                   help='T17: agendamento de memória do encoder (0 = oficial); vai só no manifest (decisão de 25/11)')
     p.add_argument('--results_root', type=Path, default=HOME / 'mpeg/results')
     p.add_argument('--work_root', type=Path, default=HOME / 'mpeg/scratch/fcgs_adapter')
     p.add_argument('--max_base_vram', type=int, default=1000)
