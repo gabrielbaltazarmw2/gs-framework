@@ -94,12 +94,13 @@ def evaluate(point, force=False, check=False):
         pos = out / "decoded_pos.ply"
         camera(point / "decoded.ply", pos, scene, out / "camera.log")          # Passo C
         txt = out / "ctc_metrics.txt"
+        thr = min(sc['vistas'], os.cpu_count())   # N420/N1646: de 1 ao n. de vistas avaliadas
         t0 = time.time()
         run([P["metrics_bin"], "-a", src, "-b", pos,                            # Passo D
              "--frameCount=1", f"--startFrame={sc.get('start_frame', 0)}",
              "--useCameraPosition=1", "--cpu=1",
              f"--width={sc['width']}", f"--height={sc['height']}",
-             f"--threads={min(sc['vistas'], os.cpu_count())}",           # N420: 1 a n. de vistas
+             f"--threads={thr}",           # N420: 1 a n. de vistas
              "-o", txt], out / "metrics.log")
         dur = time.time() - t0
         bs = point / "bitstream"                                                # Passo E
@@ -117,6 +118,7 @@ def evaluate(point, force=False, check=False):
             "rate_source": source, "n_rate_files": nfiles,
             "metrics": parse_metrics(txt.read_text()),
             "metrics_seconds": round(dur, 1),
+            "metric_threads": thr,
             "tools_version": P["tools_version"],
             "evaluated_at": datetime.now().isoformat(timespec="seconds"),
         }

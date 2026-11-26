@@ -1,9 +1,9 @@
 {
   "mpeg_root": "~/mpeg",
   "datasets": "~/mpeg/datasets",
-  "derived": "~/mpeg/derived",
+  "derived": "~/mpeg/derived_mpeg156",
   "results": "~/mpeg/results",
-  "metrics_bin": "~/mpeg/tools/mpeg-gsc-metrics/build/Release/bin/mpeg-gsc-metrics",
-  "camera_bin": "~/mpeg/tools/mpeg-gsc-tools/gsTools/build/msvc/Release/bin/cameraPosition",
-  "tools_version": "release_mpeg153 (metrics a235256, tools 31d23c9), gcc 15.2.0, cpu_only"
+  "metrics_bin": "~/mpeg/tools/mpeg-gsc-metrics_mpeg156/build/Release/bin/mpeg-gsc-metrics",
+  "camera_bin": "~/mpeg/tools/mpeg-gsc-tools_mpeg156/gsTools/build/msvc/Release/bin/gstools",
+  "tools_version": "release_mpeg156 (metrics c58059e8, tools fc83aae3), gcc 15.2.0, cpu_only"
 }
