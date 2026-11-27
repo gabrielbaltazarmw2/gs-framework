@@ -1,0 +1,147 @@
+diff --git a/encode_single_scene.py b/encode_single_scene.py
+index 3c6958b..1565452 100644
+--- a/encode_single_scene.py
++++ b/encode_single_scene.py
+@@ -51,7 +51,7 @@ def train(args):
+             g_xyz_in = g_xyz[s*per_step_size:s*per_step_size+per_step_size]
+             g_fea_in = g_fea[s*per_step_size:s*per_step_size+per_step_size]
+             if args.log_mem: torch.cuda.reset_peak_memory_stats()
+-            ttl_size += CM.compress(g_xyz_in, g_fea_in, root_path=bit_save_path, chunk_size_list=chunk_size_list, determ_codec=args.determ, mem_sched=args.mem_sched)[3]
++            ttl_size += CM.compress(g_xyz_in, g_fea_in, root_path=bit_save_path, chunk_size_list=chunk_size_list, determ_codec=args.determ, mem_sched=args.mem_sched, sync_shapes=args.sync_shapes)[3]
+             if args.log_mem: print(f'[T17] step {s}: mem_sched={args.mem_sched} max_allocated={torch.cuda.max_memory_allocated()/2**20:.0f} MiB max_reserved={torch.cuda.max_memory_reserved()/2**20:.0f} MiB N_g={CM.t17_stats["N_g"]} N_fea={CM.t17_stats["N_fea"]} N_feq={CM.t17_stats["N_feq"]}')
+     torch.cuda.synchronize(); t2 = time.time()
+     print('time:', t2-t1)
+@@ -68,6 +68,7 @@ if __name__ == "__main__":
+     parser.add_argument("--chunk_div", default=1, type=int)
+     parser.add_argument("--determ", default=1, type=float)
+     parser.add_argument("--mem_sched", default=0, type=int, choices=[0, 1, 2])  # T17: agendamento de memoria; 0 = oficial
++    parser.add_argument("--sync_shapes", default=0, type=int, choices=[0, 1])  # T18: formas do decoder no encoder; 0 = oficial
+     parser.add_argument("--log_mem", default=0, type=int)  # T17: so registra o pico; nao muda contas
+     parser.add_argument("--bit_path_to", default="./bitstreams/tmp/", type=str)
+     parser.add_argument("--ply_path_from", default="./xxx/point_cloud.ply", type=str)
+diff --git a/model/FCGS_model.py b/model/FCGS_model.py
+index e77c3cf..f5b4d97 100644
+--- a/model/FCGS_model.py
++++ b/model/FCGS_model.py
+@@ -337,13 +337,17 @@ class FCGS(nn.Module):
+         x_q = self.clamp(x_q, Q)
+         return x_q
+ 
+-    def compress(self, g_xyz, g_fea, means=None, stds=None, testing=True, root_path='./', chunk_size_list=(), determ_codec=False, mem_sched=0):
++    def compress(self, g_xyz, g_fea, means=None, stds=None, testing=True, root_path='./', chunk_size_list=(), determ_codec=False, mem_sched=0, sync_shapes=0):
+         # T17 (rascunho): mem_sched muda so o agendamento em memoria do caminho fea.
+         #   0 = oficial
+         #   1 = libera tensores mortos; contexto espacial e context_analyzer_fea por fatia
+         #       espacial dentro do laco (mesmas formas e entradas do oficial)
+         #   2 = 1 + fea_channel_ctx por fatia espacial (mesma forma que o decoder oficial usa, l.694)
+         # Gaussianos, canais, fatias s1..s4 e ordem de escrita dos .b nao mudam. Decoder inalterado.
++        # T18: sync_shapes=1 faz o encoder calcular latdim_2_griddim_fea e os contextos de canal (fea e feq)
++        #   com as mesmas formas que o decoder oficial (prefixo / fatia com to_dec), para que as duas pontas
++        #   obtenham as mesmas probabilidades. Nada mais muda: decoder, bitstream, contexto e ordem.
++        grid_pref = (lambda q, k_ed: self.latdim_2_griddim_fea(q[0:k_ed])) if sync_shapes else None  # decoder, l.684
+         c_size_fea, c_size_feq, c_size_geo = chunk_size_list
+         g_xyz, g_fea = sorted_orig_voxels(g_xyz, g_fea)  # to morton order
+         # doing compression
+@@ -427,9 +431,9 @@ class FCGS(nn.Module):
+         if mem_sched == 0:
+             fea_grid_feature = self.latdim_2_griddim_fea(g_fea_enc_q)  # [N_fea, 48]
+             # norm_xyz_clamp: [N_g, 3], mask_fea: [N_g], fea_grid_feature: [N_fea, 48], norm_xyz_clamp[s1:s2][mask_fea[s1:s2]]: [k2-k1, 3]
+-            ctx_s2 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s1][mask_fea[s0:s1]], norm_xyz_clamp[s1:s2][mask_fea[s1:s2]], fea_grid_feature[k0:k1], determ=determ_codec)  # [k2-k1, dim]
+-            ctx_s3 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s2][mask_fea[s0:s2]], norm_xyz_clamp[s2:s3][mask_fea[s2:s3]], fea_grid_feature[k0:k2], determ=determ_codec)  # [k3-k2, dim]
+-            ctx_s4 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s3][mask_fea[s0:s3]], norm_xyz_clamp[s3:s4][mask_fea[s3:s4]], fea_grid_feature[k0:k3], determ=determ_codec)  # [k4-k3, dim]
++            ctx_s2 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s1][mask_fea[s0:s1]], norm_xyz_clamp[s1:s2][mask_fea[s1:s2]], (grid_pref(g_fea_enc_q, k1) if sync_shapes else fea_grid_feature[k0:k1]), determ=determ_codec)  # [k2-k1, dim]
++            ctx_s3 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s2][mask_fea[s0:s2]], norm_xyz_clamp[s2:s3][mask_fea[s2:s3]], (grid_pref(g_fea_enc_q, k2) if sync_shapes else fea_grid_feature[k0:k2]), determ=determ_codec)  # [k3-k2, dim]
++            ctx_s4 = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s3][mask_fea[s0:s3]], norm_xyz_clamp[s3:s4][mask_fea[s3:s4]], (grid_pref(g_fea_enc_q, k3) if sync_shapes else fea_grid_feature[k0:k3]), determ=determ_codec)  # [k4-k3, dim]
+             ctx_s1 = torch.zeros(size=[k1-k0, ctx_s2.shape[-1]], dtype=ctx_s2.dtype, device=ctx_s2.device)  # [k1-k0, dim]
+             ctx_s1234 = torch.cat([torch.cat([ctx_s1, ctx_s2, ctx_s3, ctx_s4], dim=0), freq_enc_xyz[mask_fea]], dim=-1)  # [N_fea, dim]
+ 
+@@ -445,7 +449,8 @@ class FCGS(nn.Module):
+                 scale_sp_list.append(scale_sp_k)
+                 prob_sp_list.append(prob_sp_k)
+             mean_hp, scale_hp, prob_hp = torch.split(self.Decoder_fea_hyp(g_fea_enc_q_hyp_q), split_size_or_sections=[256, 256, 256], dim=-1)  # [N_fea, 256] for each
+-            mean_ch, scale_ch, prob_ch = self.fea_channel_ctx.forward(g_fea_enc_q)  # [N_fea, 256] for each
++            if not sync_shapes:
++                mean_ch, scale_ch, prob_ch = self.fea_channel_ctx.forward(g_fea_enc_q)  # [N_fea, 256] for each
+ 
+             print('Start compressing fea...')
+ 
+@@ -470,7 +475,10 @@ class FCGS(nn.Module):
+                     # to: mean_sp_l: [k_len, 64], scale_sp_l: [k_len, 64], prob_sp_l: [k_len, 64]
+                     mean_sp_l, scale_sp_l, prob_sp_l = mean_sp[:, c_st:c_ed], scale_sp[:, c_st:c_ed], prob_sp[:, c_st:c_ed]
+                     mean_hp_l, scale_hp_l, prob_hp_l = mean_hp[k_st:k_ed, c_st:c_ed], scale_hp[k_st:k_ed, c_st:c_ed], prob_hp[k_st:k_ed, c_st:c_ed]
+-                    mean_ch_l, scale_ch_l, prob_ch_l = mean_ch[k_st:k_ed, c_st:c_ed], scale_ch[k_st:k_ed, c_st:c_ed], prob_ch[k_st:k_ed, c_st:c_ed]
++                    if sync_shapes:  # T18: mesma chamada do decoder (l.694)
++                        mean_ch_l, scale_ch_l, prob_ch_l = self.fea_channel_ctx.forward(g_fea_enc_q[k_st:k_ed], to_dec=l_ch)
++                    else:
++                        mean_ch_l, scale_ch_l, prob_ch_l = mean_ch[k_st:k_ed, c_st:c_ed], scale_ch[k_st:k_ed, c_st:c_ed], prob_ch[k_st:k_ed, c_st:c_ed]
+                     probs = torch.stack([prob_sp_l, prob_hp_l, prob_ch_l], dim=-1)  # [k_len, 256, 3]
+                     probs = torch.softmax(probs, dim=-1)  # [k_len, 256, 3]
+                     prob_sp_l, prob_hp_l, prob_ch_l = probs[..., 0], probs[..., 1], probs[..., 2]  # [k_len, 256] for each
+@@ -489,7 +497,7 @@ class FCGS(nn.Module):
+             del g_fea_enc_q_hyp
+             dim_sp = self.cafea_indim - self.freq_enc.output_dim  # = ctx_s2.shape[-1] no oficial
+             mean_hp, scale_hp, prob_hp = torch.split(self.Decoder_fea_hyp(g_fea_enc_q_hyp_q), split_size_or_sections=[256, 256, 256], dim=-1)  # l.437, inalterada
+-            if mem_sched == 1:
++            if mem_sched == 1 and not sync_shapes:
+                 mean_ch, scale_ch, prob_ch = self.fea_channel_ctx.forward(g_fea_enc_q)  # l.438, inalterada
+ 
+             print('Start compressing fea...')
+@@ -510,11 +518,13 @@ class FCGS(nn.Module):
+                 if l_sp == 0:
+                     ctx_sn = torch.zeros(size=[k1-k0, dim_sp], dtype=torch.float32, device='cuda')
+                 else:
+-                    ctx_sn = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s_st][mask_fea[s0:s_st]], norm_xyz_clamp[s_st:s_ed][mask_fea[s_st:s_ed]], fea_grid_feature[k0:k_st], determ=determ_codec)  # [k_ed-k_st, dim]
++                    ctx_sn = self.feq_spatial_ctx.forward(norm_xyz_clamp[s0:s_st][mask_fea[s0:s_st]], norm_xyz_clamp[s_st:s_ed][mask_fea[s_st:s_ed]], (grid_pref(g_fea_enc_q, k_st) if sync_shapes else fea_grid_feature[k0:k_st]), determ=determ_codec)  # [k_ed-k_st, dim]
+                 ctx_sn = torch.cat([ctx_sn, freq_enc_xyz[s_st:s_ed][mask_fea[s_st:s_ed]]], dim=-1)  # == ctx_s1234[k_st:k_ed]
+                 mean_sp, scale_sp, prob_sp = torch.split(self.context_analyzer_fea(ctx_sn), split_size_or_sections=[256, 256, 256], dim=-1)  # [k_len, 256], mesma forma da l.431
+                 del ctx_sn
+-                if mem_sched >= 2:
++                if sync_shapes:
++                    mean_ch_s = scale_ch_s = prob_ch_s = None   # T18: calculado por grupo, abaixo
++                elif mem_sched >= 2:
+                     # intra-Gaussiano por fatia: mesma chamada (forma e strides) que o decoder faz na l.694
+                     mean_ch_s, scale_ch_s, prob_ch_s = self.fea_channel_ctx.forward(g_fea_enc_q[k_st:k_ed])  # [k_len, 256]
+                 else:
+@@ -524,7 +534,10 @@ class FCGS(nn.Module):
+                     c_ed = l_ch*64+64
+                     mean_sp_l, scale_sp_l, prob_sp_l = mean_sp[:, c_st:c_ed], scale_sp[:, c_st:c_ed], prob_sp[:, c_st:c_ed]
+                     mean_hp_l, scale_hp_l, prob_hp_l = mean_hp[k_st:k_ed, c_st:c_ed], scale_hp[k_st:k_ed, c_st:c_ed], prob_hp[k_st:k_ed, c_st:c_ed]
+-                    mean_ch_l, scale_ch_l, prob_ch_l = mean_ch_s[:, c_st:c_ed], scale_ch_s[:, c_st:c_ed], prob_ch_s[:, c_st:c_ed]
++                    if sync_shapes:  # T18: mesma chamada do decoder (l.694)
++                        mean_ch_l, scale_ch_l, prob_ch_l = self.fea_channel_ctx.forward(g_fea_enc_q[k_st:k_ed], to_dec=l_ch)
++                    else:
++                        mean_ch_l, scale_ch_l, prob_ch_l = mean_ch_s[:, c_st:c_ed], scale_ch_s[:, c_st:c_ed], prob_ch_s[:, c_st:c_ed]
+                     probs = torch.stack([prob_sp_l, prob_hp_l, prob_ch_l], dim=-1)  # [k_len, 64, 3]
+                     probs = torch.softmax(probs, dim=-1)
+                     prob_sp_l, prob_hp_l, prob_ch_l = probs[..., 0], probs[..., 1], probs[..., 2]
+@@ -541,7 +554,7 @@ class FCGS(nn.Module):
+                 del mean_sp, scale_sp, prob_sp, mean_ch_s, scale_ch_s, prob_ch_s, probs
+             # nada do caminho fea e lido depois daqui
+             del mean_hp, scale_hp, prob_hp, g_fea_enc_q, g_fea_enc_q_hyp_q, fea_grid_feature
+-            if mem_sched == 1:
++            if mem_sched == 1 and not sync_shapes:
+                 del mean_ch, scale_ch, prob_ch
+             torch.cuda.empty_cache()  # nao muda contas; devolve blocos ao alocador antes do caminho feq
+         bits_fea = bits_fea_main + bits_fea_hyp
+@@ -570,7 +583,8 @@ class FCGS(nn.Module):
+             scale_sp_list.append(scale_sp_k)
+             prob_sp_list.append(prob_sp_k)
+         mean_hp, scale_hp, prob_hp = torch.split(self.Decoder_feq_hyp(fe_q_hyp_q), split_size_or_sections=[48, 48, 48], dim=-1)  # [N_feq, 48] for each
+-        mean_ch, scale_ch, prob_ch = self.feq_channel_ctx.forward(fe_q)  # [N_feq, 48] for each
++        if not sync_shapes:
++            mean_ch, scale_ch, prob_ch = self.feq_channel_ctx.forward(fe_q)  # [N_feq, 48] for each
+ 
+         bits_feq_hyp = encoder_factorized_chunk(
+             x=fe_q_hyp_q,  # [N_feq, 24]
+@@ -592,7 +606,10 @@ class FCGS(nn.Module):
+                 mean_sp_l, scale_sp_l, prob_sp_l = mean_sp[:, l_ch::3], scale_sp[:, l_ch::3], prob_sp[:, l_ch::3]
+                 # mean_sp_l, scale_sp_l, prob_sp_l = mean_sp[t_st:t_ed, l_ch::3], scale_sp[t_st:t_ed, l_ch::3], prob_sp[t_st:t_ed, l_ch::3]
+                 mean_hp_l, scale_hp_l, prob_hp_l = mean_hp[t_st:t_ed, l_ch::3], scale_hp[t_st:t_ed, l_ch::3], prob_hp[t_st:t_ed, l_ch::3]
+-                mean_ch_l, scale_ch_l, prob_ch_l = mean_ch[t_st:t_ed, l_ch::3], scale_ch[t_st:t_ed, l_ch::3], prob_ch[t_st:t_ed, l_ch::3]
++                if sync_shapes:  # T18: mesma chamada do decoder (l.738)
++                    mean_ch_l, scale_ch_l, prob_ch_l = self.feq_channel_ctx.forward(fe_q[t_st:t_ed], to_dec=l_ch)
++                else:
++                    mean_ch_l, scale_ch_l, prob_ch_l = mean_ch[t_st:t_ed, l_ch::3], scale_ch[t_st:t_ed, l_ch::3], prob_ch[t_st:t_ed, l_ch::3]
+                 probs = torch.stack([prob_sp_l, prob_hp_l, prob_ch_l], dim=-1)  # [t_len, 48, 3]
+                 probs = torch.softmax(probs, dim=-1)  # [t_len, 48, 3]
+                 prob_sp_l, prob_hp_l, prob_ch_l = probs[..., 0], probs[..., 1], probs[..., 2]  # [t_len, 48] for each
